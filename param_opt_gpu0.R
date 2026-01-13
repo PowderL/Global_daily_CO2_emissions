@@ -88,6 +88,52 @@ cross_validation_sample <- function(model.dir, combo.data,
   return (obs.pre.df.all)
 }
 
+
+cross_validation_date_block <- function(model.dir, combo.data,
+                                    x.names, y.names, param, 
+                                    validation.fraction){
+  
+  date.list <- seq(min(combo.data$mdate), max(combo.data$mdate), by = "days")
+  
+  print(paste0(Sys.time(), " Execuating validation!"))
+  begin_time <- Sys.time()
+  validation.set.size <- ceiling(validation.fraction*length(date.list))
+  ## use seed 
+  set.seed(1024)
+  
+  # data.set.index <- sample(1:nrow(combo.data), nrow(combo.data), replace = F)
+  
+  obs.pre.df.list <- foreach(fold_index = 1:10)%do%{
+    
+    validation.part <- (validation.set.size*(fold_index-1)+1):(min(validation.set.size*fold_index, length(date.list)))
+    
+    
+    validation.set.date.list <- date.list[validation.part]
+    
+    train.set.date.list <- date.list[-validation.part]
+    
+    validation.data <- combo.data[mdate %in% validation.set.date.list, ]
+    train.data <- combo.data[mdate %in% train.set.date.list, ]
+    
+    model <- train_model(train.data=train.data, save.dir=model.dir, if.save.model=FALSE, 
+                         if.var.imp=FALSE, pred.y.names=y.names, x.names=x.names, param=param,
+                         model.tag=paste0("validation_", validation.fraction, "_"))
+    
+    pred.values <- predict(model, as.matrix(validation.data[, ..x.names]))
+    
+    obs.pre.df <- data.frame(validation.data$scale_factor, pred.values)
+    
+    names(obs.pre.df) <- c("x", "y")
+    rm(model)
+    gc()
+    obs.pre.df$mdate <- validation.data$mdate
+    return (obs.pre.df)
+  }
+  obs.pre.df.all <- as.data.table(rbindlist(obs.pre.df.list, use.names = T))
+  print(paste0("Comsuming: ", Sys.time() - begin_time))
+  return (obs.pre.df.all)
+}
+
 ## 分国家
 ## 计算月均排放
 for (sector_i in c("Power", "Industry", "Transportation")) {
@@ -127,8 +173,8 @@ for (sector_i in c("Power", "Industry", "Transportation")) {
               n_gpus = 1,
               nthread = 1,
               objective = "reg:linear",
-              subsample = sub_s,
-              tree_method = "hist"
+              subsample = sub_s
+              # tree_method = "hist"
             )
             validation_result <- cross_validation_sample(model.dir, train.data,
                                                          x.names, y.names, param, 

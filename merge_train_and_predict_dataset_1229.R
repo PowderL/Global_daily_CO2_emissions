@@ -1,6 +1,8 @@
 ## 组装训练数据和预测数据
 library(data.table)
 library(lubridate)
+library(readxl)
+library(doParallel)
 CM_data <- fread("/data/ltao/Qiu_paper/2024_12.csv")
 CM_data[, value := co2/1000]
 CM_data[, mdate := as.Date(date)]
@@ -37,6 +39,23 @@ temperature_world <- fread("/data/ltao/ERA5/countries_population_weigted_mean_te
 temperature_world[, country := "Int"]
 temperature_global <- rbindlist(list(temperature_add_czech, temperature_ROW, temperature_EU, temperature_world), use.names = T)
 temperature_global[, mdate := mtime]
+
+## 加载太阳辐射数据
+ssrd_global <- fread("/data/ltao/ERA5/countries_area_weigted_mean_ssrd.csv")
+ssrd_global[, mdate := mtime]
+ssrd_global[country == "Global", country := "Int"]
+temperature_global[ssrd_global, ssrd := i.ssrd, on = .(country, mdate)]
+## 加载风速数据
+u100_global <- fread("/data/ltao/ERA5/countries_area_weigted_mean_u100.csv")
+u100_global[, mdate := mtime]
+u100_global[country == "Global", country := "Int"]
+temperature_global[u100_global, u100 := abs(i.u100), on = .(country, mdate)]
+## 加载云覆盖数据
+tcc_global <- fread("/data/ltao/ERA5/countries_area_weigted_mean_tcc.csv")
+tcc_global[, mdate := mtime]
+tcc_global[country == "Global", country := "Int"]
+temperature_global[tcc_global, tcc := i.tcc, on = .(country, mdate)]
+
 ## 计算极端低温
 extreme_low_temp <- temperature_global[, .(tem_5p = quantile(tem, 0.05)), by = .(country)]
 extreme_high_temp <- temperature_global[, .(tem_95p = quantile(tem, 0.95)), by = .(country)]

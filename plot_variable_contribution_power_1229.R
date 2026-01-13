@@ -90,15 +90,15 @@ cross_validation_sample <- function(model.dir, combo.data,
 
 train_and_predict_dataset <- fread("/data/ltao/Qiu_paper/data_for_reconstruction_by_sector/train_and_predict_dataset_Power_1229.csv")
 
-train_dataset <- train_and_predict_dataset[mdate >= as.Date("2019-01-01"), c("CM", "tem", "country", "mdate", 
+train_dataset <- train_and_predict_dataset[mdate >= as.Date("2019-01-01"), c("CM", "tem", "country", "mdate", 'tcc', 'ssrd', 'u100',
                                                                              "extreme_temp", "is_holiday", "scale_factor", "co2_emission_month_avg")]
 train_dataset[, c("mmday", "mwday", "mmonth", "myear") := list(mday(mdate), wday(mdate), month(mdate), myear = year(mdate))]
 
 predict_dataset <- train_and_predict_dataset[, c("tem", "country", "mdate", "co2_emission_month_avg", 
-                                                 "extreme_temp", "is_holiday")]
+                                                 "extreme_temp", "is_holiday", 'tcc', 'ssrd', 'u100')]
 predict_dataset[, c("mmday", "mwday", "mmonth") := list(mday(mdate), wday(mdate), month(mdate))]
 
-x.names <- c("tem", "mmonth", "mwday", "mmday", "is_holiday")
+x.names <- c("tem", "mmonth", "mwday", "mmday", "is_holiday", 'tcc', 'ssrd', 'u100')
 y.names <- c("scale_factor")
 
 model.dir <- "/data/ltao/Qiu_paper/model"
@@ -219,7 +219,7 @@ global_data_daily <- out.data.all[country %in% c('United States', 'China', 'Indi
                                       scale_factor = sum(scale_factor * co2_emission_month_avg)/sum(co2_emission_month_avg)), by = .(mdate)]
 global_data_daily[, country := "Global"]
 out.data.all <- rbindlist(list(out.data.all, global_data_daily), use.names = T, fill = T)
-fwrite(out.data.all, "/data/ltao/Qiu_paper/data_for_reconstruction_by_sector/merged_all_new_power_1229.csv")
+fwrite(out.data.all, "/data/ltao/Qiu_paper/data_for_reconstruction_by_sector/merged_all_new_power_1128.csv")
 
 ###############################################################################
 ## ##
